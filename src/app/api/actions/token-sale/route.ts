@@ -87,18 +87,29 @@ export const POST = async (req: Request) => {
       }),
     );
 
+    const wlAccount = await getAssociatedTokenAddress(
+      WL_TOKEN_MINT,
+      account
+    );
+
     let message: string = '';
     if (method == "claim") {
-      const destination = await getAssociatedTokenAddress(
-        WL_TOKEN_MINT,
-        account
-      );
+
+      let units: number;
+      const wlAccountInfo = await connection.getAccountInfo(wlAccount);
+      if (wlAccountInfo) {
+        units = 22000;
+      }
+      else {
+        units = 51000;
+      }
+
       const instruction = await program.methods
         .requestWl()
         .accounts({
           mint: WL_TOKEN_MINT,
           payer: account,
-          destination: destination,
+          destination: wlAccount,
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
@@ -109,17 +120,13 @@ export const POST = async (req: Request) => {
       transaction.add(
         instruction,
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 50000
+          units: units
         }));
       message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
 
     if (method == "buy") {
 
-      const wlAccount = await getAssociatedTokenAddress(
-        WL_TOKEN_MINT,
-        account
-      );
       const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
       // @ts-ignore
       if (wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount < WL_REQUIREMENT || wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount == undefined) {
@@ -137,6 +144,14 @@ export const POST = async (req: Request) => {
       );
 
       const trackerInfo = await connection.getAccountInfo(tracker);
+      let units: number;
+
+      if (trackerInfo) {
+        units = 40000;
+      }
+      else {
+        units = 85000;
+      }
 
       if (trackerInfo == null) {
         const initTrackerInstruction = await program.methods
@@ -148,11 +163,7 @@ export const POST = async (req: Request) => {
             systemProgram: SystemProgram.programId,
           })
           .instruction();
-        transaction.add(
-          initTrackerInstruction,
-          ComputeBudgetProgram.setComputeUnitLimit({
-            units: 84000
-          }));
+        transaction.add(initTrackerInstruction)
       }
 
       const destination = await getAssociatedTokenAddress(
@@ -183,11 +194,11 @@ export const POST = async (req: Request) => {
       transaction.add(
         buyInstruction,
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 40000
+          units: units
         }));
       let initialBalance: number;
       try {
-        const balance = (await connection.getTokenAccountBalance(destination))
+        const balance = (await connection.getTokenAccountBalance(destination));
         initialBalance = balance.value.uiAmount!;
       } catch {
         // Token account not yet initiated has 0 balance
