@@ -107,7 +107,7 @@ export const POST = async (req: Request) => {
         .instruction();
 
       transaction.add(instruction);
-      message = 'WL Token claimed!'
+      message = '🎉 WL Token claimed!'
     }
 
     if (method == "buy") {
@@ -152,8 +152,6 @@ export const POST = async (req: Request) => {
         account
       );
 
-
-
       const [vault] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault")],
         PROGRAM_ID
@@ -161,7 +159,6 @@ export const POST = async (req: Request) => {
 
       // @ts-ignore
       const decimals = (await connection.getParsedAccountInfo(TOKEN_MINT))?.value?.data.parsed.info.decimals;
-      console.log(decimals)
       const buyInstruction = await program.methods
         .buyTokens(new BN(amount * 10 ** decimals))
         .accounts({
@@ -176,7 +173,15 @@ export const POST = async (req: Request) => {
           systemProgram: SystemProgram.programId,
         }).instruction();
       transaction.add(buyInstruction);
-      message = `Tokens bought! You can buy ${LIMIT_PER_WALLET - amount} more tokens if you wish.`
+      let initialBalance: number;
+      try {
+        const balance = (await connection.getTokenAccountBalance(destination))
+        initialBalance = balance.value.uiAmount!;
+      } catch {
+        // Token account not yet initiated has 0 balance
+        initialBalance = 0;
+      }
+      message = `🎉 Tokens bought! You can buy ${LIMIT_PER_WALLET - initialBalance-amount} more tokens if you wish.`
     }
 
     transaction.feePayer = account;
