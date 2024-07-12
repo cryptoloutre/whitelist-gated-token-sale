@@ -2,7 +2,7 @@ import { ACTIONS_CORS_HEADERS, ActionGetResponse, ActionPostRequest, ActionPostR
 import { ComputeBudgetProgram, Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN, Program } from "@coral-xyz/anchor";
 import idl from "./idl.json";
-import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, TOKEN_MINT, WL_TOKEN_MINT } from "./const";
+import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, TOKEN_MINT, WL_TOKEN_MINT, WL_REQUIREMENT } from "./const";
 import { TokenSale, IDL } from "./type";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -112,14 +112,30 @@ export const POST = async (req: Request) => {
 
     if (method == "buy") {
 
+      const wlAccount = await getAssociatedTokenAddress(
+        WL_TOKEN_MINT,
+        account
+      );
+
+      const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
+      // @ts-ignore
+      if (wlAccountInfo?.value?.data.parsed.info.uiAmount < WL_REQUIREMENT || wlAccountInfo?.value?.data.parsed.info.uiAmount == undefined ) {
+        const message = 'Whitelist requirement not satisfied. Please, claim a WL token and try again!';
+        return new Response(message, {
+          status: 400,
+          headers: ACTIONS_CORS_HEADERS,
+        });
+      }
+
+
       const [tracker] = PublicKey.findProgramAddressSync(
         [Buffer.from("tracker"), account.toBuffer()],
         PROGRAM_ID
       );
 
-      const info = await connection.getAccountInfo(tracker);
+      const trackerInfo = await connection.getAccountInfo(tracker);
 
-      if (info == null) {
+      if (trackerInfo == null) {
         const initTrackerInstruction = await program.methods
           .initializeLimitTracker()
           .accounts({
@@ -137,10 +153,7 @@ export const POST = async (req: Request) => {
         account
       );
 
-      const wlAccount = await getAssociatedTokenAddress(
-        WL_TOKEN_MINT,
-        account
-      );
+
 
       const [vault] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault")],
@@ -164,7 +177,7 @@ export const POST = async (req: Request) => {
           systemProgram: SystemProgram.programId,
         }).instruction();
       transaction.add(buyInstruction);
-      message = `Tokens bought! You can buy ${LIMIT_PER_WALLET-amount} more tokens if you wish.`
+      message = `Tokens bought! You can buy ${LIMIT_PER_WALLET - amount} more tokens if you wish.`
     }
 
     transaction.feePayer = account;
