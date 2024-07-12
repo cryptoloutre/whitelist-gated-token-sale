@@ -106,8 +106,12 @@ export const POST = async (req: Request) => {
         })
         .instruction();
 
-      transaction.add(instruction);
-      message = '🎉 WL Token claimed!'
+      transaction.add(
+        instruction,
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 46000
+        }));
+      message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
 
     if (method == "buy") {
@@ -118,7 +122,7 @@ export const POST = async (req: Request) => {
       );
       const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
       // @ts-ignore
-      if (wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount < WL_REQUIREMENT || wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount == undefined ) {
+      if (wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount < WL_REQUIREMENT || wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount == undefined) {
         const message = 'Whitelist requirement not satisfied. Please, claim a WL token and try again!';
         return new Response(message, {
           status: 400,
@@ -144,7 +148,11 @@ export const POST = async (req: Request) => {
             systemProgram: SystemProgram.programId,
           })
           .instruction();
-        transaction.add(initTrackerInstruction);
+        transaction.add(
+          initTrackerInstruction,
+          ComputeBudgetProgram.setComputeUnitLimit({
+            units: 84000
+          }));
       }
 
       const destination = await getAssociatedTokenAddress(
@@ -172,7 +180,11 @@ export const POST = async (req: Request) => {
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
         }).instruction();
-      transaction.add(buyInstruction);
+      transaction.add(
+        buyInstruction,
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 40000
+        }));
       let initialBalance: number;
       try {
         const balance = (await connection.getTokenAccountBalance(destination))
@@ -181,7 +193,7 @@ export const POST = async (req: Request) => {
         // Token account not yet initiated has 0 balance
         initialBalance = 0;
       }
-      message = `🎉 Tokens bought! You can buy ${LIMIT_PER_WALLET - initialBalance-amount} more tokens if you wish.`
+      message = `🎉 Tokens bought! You can buy ${LIMIT_PER_WALLET - initialBalance - amount} more tokens if you wish.`
     }
 
     transaction.feePayer = account;
