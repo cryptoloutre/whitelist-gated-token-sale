@@ -179,7 +179,10 @@ export const POST = async (req: Request) => {
         // Token account not yet initiated has 0 balance
         initialBalance = 0;
       }
-      message = `🎉 Tokens bought! You can buy ${LIMIT_PER_WALLET - initialBalance - amount} more tokens if you wish.`
+      message = `🎉 Tokens bought! `
+      if (LIMIT_PER_WALLET - initialBalance - amount >  0) {
+        message = message + `You can buy ${LIMIT_PER_WALLET - initialBalance - amount} more tokens if you wish.`;
+      }
     }
 
 
