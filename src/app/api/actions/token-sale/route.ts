@@ -116,10 +116,9 @@ export const POST = async (req: Request) => {
         WL_TOKEN_MINT,
         account
       );
-
       const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
       // @ts-ignore
-      if (wlAccountInfo?.value?.data.parsed.info.uiAmount < WL_REQUIREMENT || wlAccountInfo?.value?.data.parsed.info.uiAmount == undefined ) {
+      if (wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount < WL_REQUIREMENT || wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount == undefined ) {
         const message = 'Whitelist requirement not satisfied. Please, claim a WL token and try again!';
         return new Response(message, {
           status: 400,
