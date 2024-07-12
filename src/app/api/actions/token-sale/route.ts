@@ -109,7 +109,7 @@ export const POST = async (req: Request) => {
       transaction.add(
         instruction,
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 46000
+          units: 50000
         }));
       message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
