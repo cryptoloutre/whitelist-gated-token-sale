@@ -95,15 +95,6 @@ export const POST = async (req: Request) => {
     let message: string = '';
     if (method == "claim") {
 
-      let units: number;
-      const wlAccountInfo = await connection.getAccountInfo(wlAccount);
-      if (wlAccountInfo) {
-        units = 22000;
-      }
-      else {
-        units = 51000;
-      }
-
       const instruction = await program.methods
         .requestWl()
         .accounts({
@@ -117,11 +108,7 @@ export const POST = async (req: Request) => {
         })
         .instruction();
 
-      transaction.add(
-        instruction,
-        ComputeBudgetProgram.setComputeUnitLimit({
-          units: units
-        }));
+      transaction.add(instruction);
       message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
 
@@ -144,14 +131,6 @@ export const POST = async (req: Request) => {
       );
 
       const trackerInfo = await connection.getAccountInfo(tracker);
-      let units: number;
-
-      if (trackerInfo) {
-        units = 40000;
-      }
-      else {
-        units = 85000;
-      }
 
       if (trackerInfo == null) {
         const initTrackerInstruction = await program.methods
@@ -191,11 +170,7 @@ export const POST = async (req: Request) => {
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
         }).instruction();
-      transaction.add(
-        buyInstruction,
-        ComputeBudgetProgram.setComputeUnitLimit({
-          units: units
-        }));
+      transaction.add(buyInstruction)
       let initialBalance: number;
       try {
         const balance = (await connection.getTokenAccountBalance(destination));
@@ -207,12 +182,15 @@ export const POST = async (req: Request) => {
       message = `🎉 Tokens bought! You can buy ${LIMIT_PER_WALLET - initialBalance - amount} more tokens if you wish.`
     }
 
+
     transaction.feePayer = account;
 
     transaction.recentBlockhash = (
       await connection.getLatestBlockhash()
     ).blockhash;
 
+    const units = (await connection.simulateTransaction(transaction)).value.unitsConsumed!;
+    transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.05 }))
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
         transaction,
