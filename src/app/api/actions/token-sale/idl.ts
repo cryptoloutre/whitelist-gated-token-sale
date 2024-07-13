@@ -232,14 +232,14 @@ export type TokenSale = {
     ],
     "accounts": [
         {
-            "name": "VaultAccount",
+            "name": "vaultAccount",
             "type": {
                 "kind": "struct",
                 "fields": []
             }
         },
         {
-            "name": "TrackerAccount",
+            "name": "trackerAccount",
             "type": {
                 "kind": "struct",
                 "fields": [
@@ -541,14 +541,14 @@ export const IDL: TokenSale = {
     ],
     "accounts": [
         {
-            "name": "VaultAccount",
+            "name": "vaultAccount",
             "type": {
                 "kind": "struct",
                 "fields": []
             }
         },
         {
-            "name": "TrackerAccount",
+            "name": "trackerAccount",
             "type": {
                 "kind": "struct",
                 "fields": [

@@ -1,9 +1,8 @@
-import { ACTIONS_CORS_HEADERS, ActionGetResponse, ActionPostRequest, ActionPostResponse, MEMO_PROGRAM_ID, createPostResponse } from "@solana/actions";
-import { ComputeBudgetProgram, Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { ACTIONS_CORS_HEADERS, ActionGetResponse, ActionPostRequest, ActionPostResponse, createPostResponse } from "@solana/actions";
+import { ComputeBudgetProgram, PublicKey, SystemProgram, Transaction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN, Program } from "@coral-xyz/anchor";
-import idl from "./idl.json";
-import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, TOKEN_MINT, WL_TOKEN_MINT, WL_REQUIREMENT } from "./const";
-import { TokenSale, IDL } from "./type";
+import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, TOKEN_MINT, WL_TOKEN_MINT, WL_REQUIREMENT, connection } from "./const";
+import { TokenSale, IDL } from "./idl";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 export const GET = async (req: Request) => {
@@ -63,6 +62,7 @@ export const POST = async (req: Request) => {
     const { amount, method } = validatedQueryParams(requestUrl);
     const body: ActionPostRequest = await req.json();
 
+    // validate the client provided input
     let account: PublicKey;
     try {
       account = new PublicKey(body.account);
@@ -73,19 +73,9 @@ export const POST = async (req: Request) => {
       });
     }
 
-    const connection = new Connection(
-      "https://devnet.helius-rpc.com/?api-key=194196fa-41b1-48f1-82dc-9b4d6ba2bb6c",
-    );
-
     const program = new Program<TokenSale>(IDL, PROGRAM_ID, {
       connection,
     });
-
-    const transaction = new Transaction().add(
-      ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 1000,
-      }),
-    );
 
     const wlAccount = await getAssociatedTokenAddress(
       WL_TOKEN_MINT,
@@ -93,6 +83,16 @@ export const POST = async (req: Request) => {
     );
 
     let message: string = '';
+
+    // add priority fees
+    const transaction = new Transaction().add(
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 1000,
+      }),
+    );
+
+
+    // claim WL token case
     if (method == "claim") {
 
       const instruction = await program.methods
@@ -112,9 +112,11 @@ export const POST = async (req: Request) => {
       message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
 
+    // buy tokens case
     if (method == "buy") {
 
-            const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
+      // ensure the user has enough WL token
+      const wlAccountInfo = await connection.getParsedAccountInfo(wlAccount);
       // @ts-ignore
       if (wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount < WL_REQUIREMENT || wlAccountInfo.value?.data.parsed.info.tokenAmount.uiAmount == undefined) {
         const message = 'Whitelist requirement not satisfied. Please, claim a WL token and try again!';
@@ -124,14 +126,13 @@ export const POST = async (req: Request) => {
         });
       }
 
-
       const [tracker] = PublicKey.findProgramAddressSync(
         [Buffer.from("tracker"), account.toBuffer()],
         PROGRAM_ID
       );
 
+      // check if the limit tracker is initialzed. Initialize it otherwise.
       const trackerInfo = await connection.getAccountInfo(tracker);
-
       if (trackerInfo == null) {
         const initTrackerInstruction = await program.methods
           .initializeLimitTracker()
@@ -143,6 +144,16 @@ export const POST = async (req: Request) => {
           })
           .instruction();
         transaction.add(initTrackerInstruction)
+      }
+
+      // ensure the user didn't reach the buy limit
+      const count = (await program.account.trackerAccount.fetch(tracker)).count.toNumber();
+      if (count >= LIMIT_PER_WALLET) {
+        const message = "Buy limit reached! You can't buy more tokens.";
+        return new Response(message, {
+          status: 400,
+          headers: ACTIONS_CORS_HEADERS,
+        });
       }
 
       const destination = await getAssociatedTokenAddress(
@@ -171,6 +182,8 @@ export const POST = async (req: Request) => {
           systemProgram: SystemProgram.programId,
         }).instruction();
       transaction.add(buyInstruction)
+
+      // get the initial token balance to display how many tokens the user can still buy
       let initialBalance: number;
       try {
         const balance = (await connection.getTokenAccountBalance(destination));
@@ -180,20 +193,22 @@ export const POST = async (req: Request) => {
         initialBalance = 0;
       }
       message = `🎉 Tokens bought! `
-      if (LIMIT_PER_WALLET - initialBalance - amount >  0) {
+      if (LIMIT_PER_WALLET - initialBalance - amount > 0) {
         message = message + `You can buy ${LIMIT_PER_WALLET - initialBalance - amount} more tokens if you wish.`;
       }
     }
 
-
+    // set the end user as the fee payer
     transaction.feePayer = account;
 
     transaction.recentBlockhash = (
       await connection.getLatestBlockhash()
     ).blockhash;
 
+    // estimate the compute units consumed to request optimal compute
     const units = (await connection.simulateTransaction(transaction)).value.unitsConsumed!;
     transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.05 }))
+
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
         transaction,
