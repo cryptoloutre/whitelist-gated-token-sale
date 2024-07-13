@@ -28,12 +28,15 @@ If needed, you can request additional SOL [here](https://faucet.solana.com/).
 ### Modifications
 
 Open the `src/lib.rs` file and modify the value of `ADMIN_PUBKEY` by replacing it with the public key of the connected wallet. In this file, you can also modify `LIMIT_PER_WALLET`, `WL_REQUIREMENT` and `TOKEN_PRICE` to meet your needs but for testing purpose you can keep these values.
+
 Open the `tests/anchor.test.ts` file and modify the value of `LIMIT_PER_WALLET` and `metadata` to meet your needs. For testing purpose you can keep these values.
 
 ### Build, Deployment & Testing
 
 On the left sidebar, select the "Build & Deploy" tab. Next, click the "Build" button. If you look at the Playground's terminal, you should see your Solana program begin to compile. Once complete, you will see a success message.
+
 Then, you can click the "Deploy" button to deploy the program to the Solana blockchain.
+
 Finally, on the left sidebar, select the "Explorer" tab. Next, click the "Test" button to execute the unit tests. If, you didn't change the value of `LIMIT_PER_WALLET` click the "Test" button again to see the buy transaction fail because you have reached the buy limit.
 
 Note: If you only want to initialize the mint accounts, you can select the "Explorer" tab and click the "Run" button.
