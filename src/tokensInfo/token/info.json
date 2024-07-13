@@ -2,5 +2,5 @@
     "name": "New Token",
     "symbol": "NEW",
     "description": "Awesome new token you want to buy with our whitelist-gated token sale",
-    "image": ""
+    "image": "https://github.com/cryptoloutre/whitelist-gated-token-sale/blob/f117ff77334cf9da64c245e19c795fba73d9a686/src/tokensInfo/token/newToken.png"
   }
