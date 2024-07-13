@@ -82,7 +82,7 @@ export const POST = async (req: Request) => {
       PROGRAM_ID
     );
     const [TOKEN_MINT] = PublicKey.findProgramAddressSync(
-      [Buffer.from("token_mint")],
+      [Buffer.from("sale_mint")],
       PROGRAM_ID
     );
 
