@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID: PublicKey = new PublicKey("8fsRhyPijV43vvTS36CREHBKixE71nt3gige522Ay7Rv");
+export const PROGRAM_ID: PublicKey = new PublicKey("FNS6DWapPBEn3Vwd5BzeUX5mh1nVCMQVAKnmZB2pUF32");
 export const WL_REQUIREMENT: number = 1;
 export const LIMIT_PER_WALLET: number = 100;
 

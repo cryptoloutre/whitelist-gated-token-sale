@@ -17,7 +17,7 @@ To deploy and test our program, we will use [Solana Playground](https://beta.sol
 
 ### Import our project
 
-In a new tab in your browser, open our project on Solana Playground available [here]().
+In a new tab in your browser, open our project on Solana Playground available [here](https://beta.solpg.io/66928c3dcffcf4b13384d230).
 Next, import the project into your local workspace by clicking the "Import" icon and naming your project with the name you want.
 
 ### Create a Playground wallet
