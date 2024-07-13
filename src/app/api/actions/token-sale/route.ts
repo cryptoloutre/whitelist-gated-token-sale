@@ -1,7 +1,7 @@
 import { ACTIONS_CORS_HEADERS, ActionGetResponse, ActionPostRequest, ActionPostResponse, createPostResponse } from "@solana/actions";
 import { ComputeBudgetProgram, PublicKey, SystemProgram, Transaction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN, Program } from "@coral-xyz/anchor";
-import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, TOKEN_MINT, WL_TOKEN_MINT, WL_REQUIREMENT, connection } from "./const";
+import { DEFAULT_BUY_AMOUNT, DEFAULT_METHOD, LIMIT_PER_WALLET, PROGRAM_ID, WL_REQUIREMENT, connection } from "./const";
 import { TokenSale, IDL } from "./idl";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -17,7 +17,7 @@ export const GET = async (req: Request) => {
     const payload: ActionGetResponse = {
       title: "Whitelist-gated Token Sale",
       icon: new URL("/talent-olympics.jpg", new URL(req.url).origin).toString(),
-      description: "First, claim a WL Token. Then, buy as many tokens as you want (with a limit of 100 tokens per wallet). Token's price : 0.01 SOL.",
+      description: "First, claim a WL Token. Then, buy as many tokens as you want (with a limit of 100 tokens per wallet). Token price : 0.01 SOL.",
       label: "Claim",
       links: {
         actions: [
@@ -76,6 +76,15 @@ export const POST = async (req: Request) => {
     const program = new Program<TokenSale>(IDL, PROGRAM_ID, {
       connection,
     });
+
+    const [WL_TOKEN_MINT] = PublicKey.findProgramAddressSync(
+      [Buffer.from("wl_mint")],
+      PROGRAM_ID
+    );
+    const [TOKEN_MINT] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token_mint")],
+      PROGRAM_ID
+    );
 
     const wlAccount = await getAssociatedTokenAddress(
       WL_TOKEN_MINT,
