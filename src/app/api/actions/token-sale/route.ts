@@ -154,15 +154,16 @@ export const POST = async (req: Request) => {
           .instruction();
         transaction.add(initTrackerInstruction)
       }
-
-      // ensure the user didn't reach the buy limit
-      const count = (await program.account.trackerAccount.fetch(tracker)).count.toNumber();
-      if (count >= LIMIT_PER_WALLET) {
-        const message = "Buy limit reached! You can't buy more tokens.";
-        return new Response(message, {
-          status: 400,
-          headers: ACTIONS_CORS_HEADERS,
-        });
+      else {
+        // ensure the user didn't reach the buy limit
+        const count = (await program.account.trackerAccount.fetch(tracker))?.count.toNumber();
+        if (count >= LIMIT_PER_WALLET) {
+          const message = "Buy limit reached! You can't buy more tokens.";
+          return new Response(message, {
+            status: 400,
+            headers: ACTIONS_CORS_HEADERS,
+          });
+        }
       }
 
       const destination = await getAssociatedTokenAddress(
