@@ -162,10 +162,10 @@ export const POST = async (req: Request) => {
         transaction.add(initTrackerInstruction)
         // for unknown reason, if you try to buy token right after the claim of WL token, the estimation of the consumed compute units is false
         // So we hardcode a limit based on experiments
-        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 85000 }))
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 100000 }))
       }
       else {
-        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50000 }))
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 60000 }))
         // ensure the user didn't reach the buy limit
         const count = (await program.account.trackerAccount.fetch(tracker, "confirmed"))?.count.toNumber();
         if (count >= LIMIT_PER_WALLET) {
