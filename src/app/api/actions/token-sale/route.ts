@@ -100,6 +100,9 @@ export const POST = async (req: Request) => {
       }),
     );
 
+    // set the end user as the fee payer
+    transaction.feePayer = account;
+
 
     // claim WL token case
     if (method == "claim") {
@@ -118,6 +121,10 @@ export const POST = async (req: Request) => {
         .instruction();
 
       transaction.add(instruction);
+      // estimate the compute units consumed to request optimal compute
+      const units = (await connection.simulateTransaction(transaction)).value.unitsConsumed!;
+      transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.05 }));
+
       message = '🎉 WL Token claimed! Refresh the page to buy tokens.'
     }
 
@@ -140,8 +147,8 @@ export const POST = async (req: Request) => {
         PROGRAM_ID
       );
 
-      // check if the limit tracker is initialzed. Initialize it otherwise.
-      const trackerInfo = await connection.getAccountInfo(tracker);
+      // check if the limit tracker is initialized. Initialize it otherwise.
+      const trackerInfo = await connection.getAccountInfo(tracker, "confirmed");
       if (trackerInfo == null) {
         const initTrackerInstruction = await program.methods
           .initializeLimitTracker()
@@ -153,10 +160,14 @@ export const POST = async (req: Request) => {
           })
           .instruction();
         transaction.add(initTrackerInstruction)
+        // for unknown reason, if you try to buy token right after the claim of WL token, the estimation of the consumed compute units is false
+        // So we hardcode a limit based on experiments
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 85000 }))
       }
       else {
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50000 }))
         // ensure the user didn't reach the buy limit
-        const count = (await program.account.trackerAccount.fetch(tracker))?.count.toNumber();
+        const count = (await program.account.trackerAccount.fetch(tracker, "confirmed"))?.count.toNumber();
         if (count >= LIMIT_PER_WALLET) {
           const message = "Buy limit reached! You can't buy more tokens.";
           return new Response(message, {
@@ -177,7 +188,7 @@ export const POST = async (req: Request) => {
       );
 
       // @ts-ignore
-      const decimals = (await connection.getParsedAccountInfo(TOKEN_MINT))?.value?.data.parsed.info.decimals;
+      const decimals = (await connection.getParsedAccountInfo(TOKEN_MINT, "confirmed"))?.value?.data.parsed.info.decimals;
       const buyInstruction = await program.methods
         .buyTokens(new BN(amount * 10 ** decimals))
         .accounts({
@@ -191,7 +202,7 @@ export const POST = async (req: Request) => {
           rent: SYSVAR_RENT_PUBKEY,
           systemProgram: SystemProgram.programId,
         }).instruction();
-      transaction.add(buyInstruction)
+      transaction.add(buyInstruction);
 
       // get the initial token balance to display how many tokens the user can still buy
       let initialBalance: number;
@@ -208,17 +219,9 @@ export const POST = async (req: Request) => {
       }
     }
 
-    // set the end user as the fee payer
-    transaction.feePayer = account;
-
     transaction.recentBlockhash = (
       await connection.getLatestBlockhash()
     ).blockhash;
-
-    // estimate the compute units consumed to request optimal compute
-    const units = (await connection.simulateTransaction(transaction)).value.unitsConsumed!;
-    console.log("CU consummed", units)
-    // transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.1 }))
 
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
