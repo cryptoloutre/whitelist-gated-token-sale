@@ -1,6 +1,8 @@
 # Whitelist-gated Token Sale
 This repo allows you to create a Whitelist-gated Token Sale and allows your users to buy tokens thanks to a [Blink](https://solana.com/fr/docs/advanced/actions).
 
+https://github.com/user-attachments/assets/9d77a576-ae50-4b6f-89f7-734a45738233
+
 ## Installation
 
 Clone the repo and install the dependencies:
