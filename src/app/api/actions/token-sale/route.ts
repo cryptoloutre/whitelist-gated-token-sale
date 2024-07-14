@@ -218,7 +218,7 @@ export const POST = async (req: Request) => {
     // estimate the compute units consumed to request optimal compute
     const units = (await connection.simulateTransaction(transaction)).value.unitsConsumed!;
     console.log("CU consummed", units)
-    transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.1 }))
+    // transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: units * 1.1 }))
 
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
